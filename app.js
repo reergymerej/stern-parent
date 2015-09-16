@@ -10,6 +10,7 @@ var clearReference = function (child) {
 };
 
 var Child = function (modulePath, countdown, args) {
+  this.callbacks = {};
   this.countdown = countdown || 5000;
   this.exited = false;
   this.killTimeout = null;
@@ -36,7 +37,11 @@ Child.prototype.onExit = function () {
 };
 
 Child.prototype.onClose = function () {
+  this.cancelScheduledKill();
   clearReference(this.child);
+  if (typeof this.callbacks.done === 'function') {
+    this.callbacks.done();
+  }
 };
 
 Child.prototype.onMessage = function (message) {
@@ -82,9 +87,14 @@ Child.prototype.cancelScheduledKill = function () {
   this.killTimeout = null;
 };
 
+Child.prototype.on = function (eventName, callback) {
+  this.callbacks[eventName] = callback;
+};
+
 var birth = function (modulePath, countdown, args) {
   var child = new Child(modulePath, countdown, args);
   children.push(child);
+  return child;
 };
 
 module.exports = {

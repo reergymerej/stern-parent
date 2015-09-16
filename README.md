@@ -36,3 +36,4 @@ process.send('cancel');
 
 **TODO**
 * set option to toggle logging
+* document done callback
