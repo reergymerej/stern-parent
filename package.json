@@ -1,3 +1,24 @@
 {
-  "dependencies": {}
+  "dependencies": {},
+  "name": "stern-parent",
+  "description": "Use to launch a module in another process.  The other process will be forcibly killed once the timer expires, even if the script is unresponsive or hijacking SIGTERM.",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reergymerej/stern-parent.git"
+  },
+  "keywords": [
+    "child",
+    "process"
+  ],
+  "author": "Jeremy Greer <jeremy.greer.atl@gmail.com> (http://jeremygreer.herokuapp.com/)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/reergymerej/stern-parent/issues"
+  },
+  "homepage": "https://github.com/reergymerej/stern-parent#readme"
 }
