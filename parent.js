@@ -1,78 +1,92 @@
-// This spawns a child and forcefully closes it after a timer expires.
-// The child can extend the timer if needed.
-
 'use strict';
 
+var util = require('util');
 var child_process = require('child_process');
-var exited = false;
-var killTimeout = null;
-var child;
 
-var forceKill = function () {
-    child.kill();
-    if (!exited) {
-        child.kill('SIGKILL');
-    }
+var children = [];
+
+var clearReference = function (child) {
+  children.splice(children.indexOf(child), 1);
 };
 
-var scheduleKill = function (ms) {
-    ms = ms || 5000;
+var Child = function (modulePath, countdown, args) {
+  this.countdown = countdown || 5000;
+  this.exited = false;
+  this.killTimeout = null;
+  this.child = child_process.fork(modulePath, args);
 
-    if (killTimeout) {
-        console.log('bumping timer');
-        cancelScheduledKill();
-    }
-
-    killTimeout = setTimeout(function () {
-        console.log('timer expired');
-        forceKill();
-    }, ms);
-
-    console.log('child will be killed in %dms', ms);
+  this.addHandlers();
+  this.scheduleKill();
 };
 
-var cancelScheduledKill = function () {
-    clearTimeout(killTimeout);
-    killTimeout = null;
+Child.prototype.log = function () {
+  var args = Array.prototype.slice.apply(arguments);
+  var formatted = util.format.apply(util.format, args);
+  console.log(this.child.pid + ' > ' + formatted);
 };
 
-var startChild = function (modulePath, args) {
-    child = child_process.fork(modulePath, args);
-
-    scheduleKill();
-
-    child.on('error', function (err) {
-        console.log('error', err);
-
-    }).on('exit', function (code, signal) {
-        console.log('exit', code, signal);
-        exited = true;
-
-    }).on('close', function (code, signal) {
-        console.log('close', code, signal);
-        exited = false;
-        killTimeout = null;
-
-    }).on('disconnect', function () {
-        console.log('disconnected');
-
-    }).on('message', function (message, sendHandle) {
-
-        var type = message.type || message;
-
-        switch (type) {
-            case 'timer-start':
-                scheduleKill(message.ms);
-                break;
-            case 'timer-end':
-                cancelScheduledKill();
-                break;
-            default:
-                console.log('message', message, sendHandle);
-        }
-    });
+Child.prototype.addHandlers = function () {
+  this.child.on('exit', this.onExit.bind(this)).
+  on('close', this.onClose.bind(this)).
+  on('message', this.onMessage.bind(this));
 };
 
-module.exports = function (modulePath, args) {
-    return startChild(modulePath, args);
+Child.prototype.onExit = function () {
+  this.exited = true;
+};
+
+Child.prototype.onClose = function () {
+  clearReference(this.child);
+};
+
+Child.prototype.onMessage = function (message) {
+  var type = message.type || message;
+
+  switch (type) {
+    case 'countdown':
+      this.scheduleKill(message.ms);
+      break;
+    case 'cancel':
+      this.cancelScheduledKill();
+      break;
+  }
+};
+
+Child.prototype.forceKill = function () {
+  this.child.kill();
+  if (!this.exited) {
+    this.log('forcing kill');
+    this.child.kill('SIGKILL');
+  }
+};
+
+Child.prototype.scheduleKill = function (ms) {
+  var me = this;
+  ms = ms || this.countdown;
+
+  if (this.killTimeout) {
+    // this.log('bumping timer');
+    this.cancelScheduledKill();
+  }
+
+  this.killTimeout = setTimeout(function () {
+    me.log('killing child process');
+    me.forceKill();
+  }, ms);
+
+  this.log('will be killed in %d ms', ms);
+};
+
+Child.prototype.cancelScheduledKill = function () {
+  clearTimeout(this.killTimeout);
+  this.killTimeout = null;
+};
+
+var birth = function (modulePath, countdown, args) {
+  var child = new Child(modulePath, countdown, args);
+  children.push(child);
+};
+
+module.exports = {
+  birth: birth
 };

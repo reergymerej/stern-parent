@@ -1,23 +1,20 @@
-// runs the code, reports back
-
-
 'use strict';
 
-var argv = require('yargs').argv;
-
-var codeId = argv.codeId;
-var reqId = argv.reqId;
-
-
-console.log(codeId, reqId);
+console.log(process.argv);
 
 // attempt to run away
 // process.disconnect();
 
 // infinite
 setInterval(function () {
-    console.log('setInterval');
+    console.log(process.pid, 'setInterval');
 }, 1000);
+
+
+
+var vm = require('vm');
+var code = 'while(1) {}';
+vm.runInThisContext(code);
 
 // ignore kill
 // process.on('SIGTERM', function () {
@@ -31,9 +28,9 @@ setInterval(function () {
 
 // process.send('timer-end');
 
-process.send({
-    type: 'timer-start',
-    ms: 500
-});
+// process.send({
+//     type: 'countdown',
+//     ms: 500
+// });
 
-process.send('timer-sent');
+// process.send('cancel');
